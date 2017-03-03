@@ -1,6 +1,17 @@
 Changelog
 =========
 
+1.0a10 (unreleased)
+-------------------
+
+Bugfixes:
+
+- @search endpoint: Also prefill path query dict with context path.
+  This will allow users to supply an argument like path.depth=1, and still
+  have path.query be prefilled server-side to the context's path.
+  [lgraf]
+
+
 1.0a9 (2017-03-03)
 ------------------
 
