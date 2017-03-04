@@ -31,6 +31,7 @@ Contents
    serialization
    searching
    customization
+   translations
 
 .. include:: ../../README.rst
 
@@ -44,4 +45,3 @@ Appendix, Indices and tables
    glossary
 
 * :ref:`genindex`
-

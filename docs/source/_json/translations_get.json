@@ -1,0 +1,16 @@
+GET /plone/en/test-document/@translations
+Accept: application/json
+
+HTTP 200 OK
+content-type: application/json
+
+{
+  "@id": "http://localhost:55001/plone/en/test-document", 
+  "language": "en", 
+  "translations": [
+    {
+      "@id": "http://localhost:55001/plone/es/test-document", 
+      "language": "es"
+    }
+  ]
+}

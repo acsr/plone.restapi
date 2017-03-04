@@ -1,17 +1,22 @@
 # -*- coding: utf-8 -*-
+from Products.CMFCore.utils import getToolByName
 from datetime import datetime
 from DateTime import DateTime
 from plone import api
 from datetime import timedelta
 from freezegun import freeze_time
+from plone.app.multilingual.interfaces import ITranslationManager
+from plone.app.testing import applyProfile
 from plone.app.testing import setRoles
 from plone.app.testing import SITE_OWNER_NAME
 from plone.app.testing import SITE_OWNER_PASSWORD
 from plone.app.testing import TEST_USER_ID
 from plone.app.textfield.value import RichTextValue
+from plone.dexterity.utils import createContentInContainer
 from plone.namedfile.file import NamedBlobFile
 from plone.namedfile.file import NamedBlobImage
 from plone.restapi.testing import PLONE_RESTAPI_DX_FUNCTIONAL_TESTING
+from plone.restapi.testing import PLONE_RESTAPI_DX_PAM_FUNCTIONAL_TESTING
 from plone.restapi.testing import RelativeSession
 from plone.testing.z2 import Browser
 from plone.uuid.interfaces import IMutableUUID
@@ -598,3 +603,73 @@ class TestTraversal(unittest.TestCase):
         response = self.api_session.get(
             '{}/@components/navigation'.format(self.document.absolute_url()))
         save_response_for_documentation('navigation.json', response)
+
+
+class TestPAMDocumentation(unittest.TestCase):
+
+    layer = PLONE_RESTAPI_DX_PAM_FUNCTIONAL_TESTING
+
+    def setUp(self):
+        self.app = self.layer['app']
+        self.request = self.layer['request']
+        self.portal = self.layer['portal']
+        self.portal_url = self.portal.absolute_url()
+
+        self.time_freezer = freeze_time("2016-10-21 19:00:00")
+        self.frozen_time = self.time_freezer.start()
+
+        self.api_session = RelativeSession(self.portal_url)
+        self.api_session.headers.update({'Accept': 'application/json'})
+        self.api_session.auth = (SITE_OWNER_NAME, SITE_OWNER_PASSWORD)
+
+        setRoles(self.portal, TEST_USER_ID, ['Manager'])
+
+        language_tool = getToolByName(self.portal, 'portal_languages')
+        language_tool.addSupportedLanguage('en')
+        language_tool.addSupportedLanguage('es')
+        applyProfile(self.portal, 'plone.app.multilingual:default')
+        self.en_content = createContentInContainer(
+            self.portal['en'], 'Document', title='Test document')
+        self.es_content = createContentInContainer(
+            self.portal['es'], 'Document', title='Test document')
+
+        import transaction
+        transaction.commit()
+        self.browser = Browser(self.app)
+        self.browser.handleErrors = False
+        self.browser.addHeader(
+            'Authorization',
+            'Basic %s:%s' % (SITE_OWNER_NAME, SITE_OWNER_PASSWORD,)
+        )
+
+    def tearDown(self):
+        self.time_freezer.stop()
+
+    def test_documentation_translations_post(self):
+        response = self.api_session.post(
+            '{}/@translations'.format(self.en_content.absolute_url()),
+            json={
+                'id': self.es_content.absolute_url()
+            }
+        )
+        save_response_for_documentation('translations_post.json', response)
+
+    def test_documentation_translations_get(self):
+        ITranslationManager(self.en_content).register_translation(
+            'es', self.es_content)
+        transaction.commit()
+        response = self.api_session.get(
+            '{}/@translations'.format(self.en_content.absolute_url()))
+
+        save_response_for_documentation('translations_get.json', response)
+
+    def test_documentation_translations_delete(self):
+        ITranslationManager(self.en_content).register_translation(
+            'es', self.es_content)
+        transaction.commit()
+        response = self.api_session.delete(
+            '{}/@translations'.format(self.en_content.absolute_url()),
+            json={
+                "language": "es"
+            })
+        save_response_for_documentation('translations_delete.json', response)
